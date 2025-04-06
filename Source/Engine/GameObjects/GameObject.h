@@ -23,7 +23,7 @@ public:
     GameObject(std::filesystem::path _texturePath, char* _name, float startX, float startY);
     ~GameObject();
 
-    void InitPhysics(b2WorldId& id);
+    void InitPhysics();
     b2BodyId myBodyId;
 
     //Changers

@@ -63,13 +63,13 @@ GameObject::GameObject(const std::filesystem::path  _texturePath, char* _name, f
 
 GameObject::~GameObject() {}
 
-void GameObject::InitPhysics(b2WorldId& id) {
+void GameObject::InitPhysics() {
     b2BodyDef bodyDef = b2DefaultBodyDef();
     bodyDef.isEnabled = true;
     bodyDef.type = b2_dynamicBody;
     bodyDef.position = b2Vec2{position.x, position.y};
 
-    myBodyId = b2CreateBody(id, &bodyDef);
+    myBodyId = b2CreateBody(engine->worldId, &bodyDef);
     b2Polygon dynamicBox = b2MakeBox(1.0f, 1.0f);
 
     b2ShapeDef shapedef = b2DefaultShapeDef();
