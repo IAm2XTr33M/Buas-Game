@@ -12,6 +12,7 @@ public:
 
     GameEngine();
     void Run();
+    bool centerPositions = true;
     std::vector<GameObject> gameObjects;
     sf::View view;
 
@@ -30,9 +31,8 @@ public:
 
     EventSystem* events = new EventSystem();
 
-    float timeStep = 1 / 60;
+    float targetFPS = 5.0f;
     b2WorldId worldId;
-
 
 private:
     void ProcessEvents();

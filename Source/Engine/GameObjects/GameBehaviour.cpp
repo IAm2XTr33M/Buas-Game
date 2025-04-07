@@ -10,6 +10,7 @@ GameBehaviour::GameBehaviour()
 void GameBehaviour::SetGameObject(GameObject* gameObject) {
 	this->gameObject = gameObject;
 	events = gameObject->events;
+	bodyId = gameObject->bodyId;
 }
 
 void GameBehaviour::Enable() {

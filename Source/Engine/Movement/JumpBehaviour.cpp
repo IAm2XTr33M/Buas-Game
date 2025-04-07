@@ -33,12 +33,12 @@ void JumpBehaviour::Update() {
 
 			canTryJump = false;
 
-			if (gameObject->IsGrounded) {
+/*			if (gameObject->IsGrounded) {
 				currentJumpForce = jumpForce;
 				currentJumpAmount = 1;
 				jump = true;
 			}
-			else if(currentJumpAmount > 0 && currentJumpAmount < maxJumpAmount) {
+			else */if(currentJumpAmount > 0 && currentJumpAmount < maxJumpAmount) {
 				jumpTimer = 0;
 				currentJumpForce = jumpForce;
 				currentJumpAmount++;
@@ -56,7 +56,7 @@ void JumpBehaviour::Update() {
 
 		currentJumpForce -= jumpRolloff * deltaTime;
 
-		gameObject->MovePosition(0, currentJumpForce * deltaTime);
+		//gameObject->MovePosition(0, currentJumpForce * deltaTime);
 		
 		canTryJump = true;
 

@@ -16,7 +16,6 @@ void MovementBehaviour::Update() {
 			sf::Keyboard::isKeyPressed(sf::Keyboard::Left)) {
 			Xmove -= speed;
 
-			events->RunEvent("Jump Event", gameObject);
 		}
 		if (sf::Keyboard::isKeyPressed(sf::Keyboard::D) ||
 			sf::Keyboard::isKeyPressed(sf::Keyboard::Right)) {
@@ -26,15 +25,15 @@ void MovementBehaviour::Update() {
 	if (movementEnabled_y) {
 		if (sf::Keyboard::isKeyPressed(sf::Keyboard::W) ||
 			sf::Keyboard::isKeyPressed(sf::Keyboard::Up)) {
-			Ymove += speed;
+			Ymove -= speed;
 		}
 		if (sf::Keyboard::isKeyPressed(sf::Keyboard::S) ||
 			sf::Keyboard::isKeyPressed(sf::Keyboard::Down)) {
-			Ymove -= speed;
+			Ymove += speed;
 		}
 	}
 
 	if (Xmove != 0 || Ymove != 0) {
-		gameObject->MovePosition(Xmove * deltaTime, Ymove * deltaTime);
+		b2Body_ApplyForceToCenter(bodyId, {Xmove, Ymove},true);
 	}
 }

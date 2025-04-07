@@ -4,7 +4,7 @@ class EventSystem;
 
 #include "Events/EventSub.h"
 #include "Events/GameEvent.h"
-
+#include "box2d/box2d.h"
 class GameBehaviour
 {
 public:
@@ -22,6 +22,8 @@ public:
 
 	GameObject* gameObject;
 	EventSystem* events;
+
+	b2BodyId bodyId;
 
 	template <typename ClassType, typename ArgType>
 	auto call(void (ClassType::* func)(ArgType), ClassType* instance) {

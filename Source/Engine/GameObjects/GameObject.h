@@ -15,35 +15,32 @@ class GameEngine;
 class GameObject {
 public:
     // Constructor and Destructor
-    GameObject();
-    GameObject(const sf::Texture& texture);
-    GameObject(const sf::Texture& texture, char* _name);
-    GameObject(const sf::Texture& texture, float startX, float startY);
-    GameObject(const sf::Texture& texture, char* _name, float startX, float startY);
     GameObject(std::filesystem::path _texturePath, char* _name, float startX, float startY);
     ~GameObject();
 
-    void InitPhysics();
-    b2BodyId myBodyId;
+    float worldScale = 30.0f;
+    void InitPhysics(b2WorldId* id);
+    b2BodyId bodyId;
 
-    //Changers
-    void MovePosition(sf::Vector2f position);
-    void MovePosition(float posX, float posY);
-    void Rotate(float rotation);
-    void ChangeScale(float scale);
-    void ChangeScale(float scaleX, float scaleY);
-    void ChangeScale(sf::Vector2f scale);
 
-    // Getters
-    sf::Vector2f GetPosition() const;
+    sf::Vector2f GetPos();
+    b2Vec2 GetPosInM();
+    void SetPosInM(b2Vec2 pos);
+    void SetPos(sf::Vector2f pos);
+    
+    float GetRot();
+    void SetRot(float rot);
+
+    sf::Vector2f GetSize();
+    b2Vec2 GetSizeInM();
+    void SetSizeInM(b2Vec2 size);
+    void SetSize(sf::Vector2f size);
+
     sf::Vector2f GetCenter() const;
-    float GetRotation() const;
-    sf::Vector2f GetScale() const;
+
+
     const sf::Sprite& GetSprite() const;
 
-    void SetScale(float scale);
-    void SetScale(float scaleX, float scaleY);
-    void SetScale(sf::Vector2f scale);
 
 
     // Start Update and Render
@@ -54,19 +51,6 @@ public:
 
     bool hasCollision = false;
     bool checkWalls = false;
-
-    void CheckGround(bool speedup = false);
-    char* groundTag = "ground";
-    float groundCheckDistance = 1;
-    float groundChecksPerSecond = 15;
-    bool IsGrounded = false;
-
-    void CheckWall(bool speedup = false);
-    char* wallTag = "wall";
-    float wallCheckDistance = 1;
-    float wallChecksPerSecond = 15;
-    enum Walls { None,Left,Right };
-    Walls wallCheck = None;
 
     void addBehaviour(GameBehaviour* behaviour);
     template <typename T>
@@ -103,6 +87,8 @@ public:
 
     float deltaTime = 0;
 private:
+    bool centerPos = true;
+
 
     float groundCheckTimer = 0;
     float wallCheckTimer = 0;

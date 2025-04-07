@@ -6,6 +6,7 @@
 void CameraFollow::Start() {
 	view = &gameObject->engine->view;
 	previousPosition = gameObject->position;
+	Update();
 }
 
 void CameraFollow::Update() {

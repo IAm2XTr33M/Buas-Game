@@ -1,48 +1,7 @@
 #include "GameObject.h"
 #include <iostream>
+#include <Physics/PhysicsBehaviour.h>
 
-GameObject::GameObject() {
-    position = sf::Vector2f(0, 0);
-    rotation = 0;
-    scale = sf::Vector2f(1.0f, 1.0f);
-    UpdateSprite();
-}
-GameObject::GameObject(const sf::Texture& _texture) {
-    texture = _texture;
-    position = sf::Vector2f(50, 50);
-    rotation = 0;
-    scale = sf::Vector2f(1.0f, 1.0f);
-    UpdateSprite();
-}
-GameObject::GameObject(const sf::Texture& _texture, char* _name) {
-    name = _name;
-    texture = _texture;
-    position = sf::Vector2f(50, 50);
-    rotation = 0;
-    scale = sf::Vector2f(1.0f, 1.0f);
-
-    UpdateSprite();
-}
-GameObject::GameObject(const sf::Texture& _texture, float _startX, float _startY) {
-    texture = _texture;
-    position = sf::Vector2f(50, 50);
-    rotation = 0;
-    scale = sf::Vector2f(1.0f, 1.0f);
-
-    UpdateSprite();
-}
-GameObject::GameObject(const sf::Texture& _texture, char* _name, float _startX, float _startY) {
-    name = _name;
-    texture = _texture;
-
-    position = sf::Vector2f(_startX, _startY);
-
-    std::cout << "Created " << _name << " Position " << _startX  << std::endl;
-    rotation = 0;
-    scale = sf::Vector2f(1.0f, 1.0f);
-
-    UpdateSprite();
-}
 GameObject::GameObject(const std::filesystem::path  _texturePath, char* _name, float _startX, float _startY) {
     name = _name;
     if (texture.loadFromFile(_texturePath.generic_string())) {
@@ -51,225 +10,93 @@ GameObject::GameObject(const std::filesystem::path  _texturePath, char* _name, f
     else {
         std::cout << "Texture at path " << _texturePath << " is not valid" << std::endl;
     }
-
     position = sf::Vector2f(_startX, _startY);
 
-    std::cout << "Created " << _name << " Position " << _startX << std::endl;
+    std::cout << "Created " << _name << " Position " << position.x << ":" << position.y << std::endl;
     rotation = 0;
-    scale = sf::Vector2f(1.0f, 1.0f);
+
+    sf::Vector2u textureSize = texture.getSize();
+    scale = { static_cast<float>(textureSize.x), static_cast<float>(textureSize.y) };
 
     UpdateSprite();
 }
-
 GameObject::~GameObject() {}
 
-void GameObject::InitPhysics() {
-    b2BodyDef bodyDef = b2DefaultBodyDef();
-    bodyDef.isEnabled = true;
-    bodyDef.type = b2_dynamicBody;
-    bodyDef.position = b2Vec2{position.x, position.y};
+void GameObject::InitPhysics(b2WorldId* worldId) {
 
-    myBodyId = b2CreateBody(engine->worldId, &bodyDef);
-    b2Polygon dynamicBox = b2MakeBox(1.0f, 1.0f);
+    PhysicsBehaviour* physics = GetBehaviour<PhysicsBehaviour>();
 
-    b2ShapeDef shapedef = b2DefaultShapeDef();
-    shapedef.density = 1.0f;
-    shapedef.friction = 0.3f;
+    b2Vec2 startPos = GetPosInM(); 
+    b2Vec2 size = GetSizeInM();
+    b2BodyDef body = b2DefaultBodyDef();
 
-    b2CreatePolygonShape(myBodyId, &shapedef, &dynamicBox);
-}
+    body.name = name;
+    body.isEnabled = true;
+    body.position = startPos;
 
-// Changers
-void GameObject::MovePosition(sf::Vector2f _position) {    
-    if (hasCollision) {
-        CheckGround(true);
+    b2ShapeDef shapeDef = b2DefaultShapeDef();
 
-        sf::FloatRect spriteBounds = sprite.getGlobalBounds();
-        sf::RectangleShape boundingBox_X;
-        boundingBox_X.setSize(sf::Vector2f(spriteBounds.width, spriteBounds.height));
-        boundingBox_X.setPosition(spriteBounds.left + _position.x, spriteBounds.top);
-        sf::RectangleShape boundingBox_Y;
-        boundingBox_Y.setSize(sf::Vector2f(spriteBounds.width, spriteBounds.height));
-        boundingBox_Y.setPosition(spriteBounds.left, spriteBounds.top - _position.y);
+    if (physics != nullptr) {
+        body.type = physics->isStatic ? b2_staticBody : b2_dynamicBody;
+        body.gravityScale = physics->useGravity ? physics->gravityScale : 0.0f;
+        bodyId = b2CreateBody(*worldId, &body);
 
-        bool canMoveX = true;
-        bool canMoveY = true;
+        shapeDef.density = physics->shapeDensity;
+        shapeDef.friction = physics->shapeFriction;
 
-        for (auto& obj : *engineGameObjects) {
-            if (obj.hasCollision && &obj != this) {
+        if (physics->shape == PhysicsBehaviour::Shape::Box) {
+            std::cout << "CREATED Box" << std::endl;
 
-                if (boundingBox_X.getGlobalBounds().intersects(obj.sprite.getGlobalBounds())) {
-                    canMoveX = false;
-                }
-                if (boundingBox_Y.getGlobalBounds().intersects(obj.sprite.getGlobalBounds())) {
-                    canMoveY = false;
-                }
-            }
+            b2Polygon polygon = b2MakeBox(size.x / 2, size.y / 2);
+            b2CreatePolygonShape(bodyId, &shapeDef, &polygon);
         }
-
-        if (canMoveX == false && canMoveY == false) {
-            if (_position.x < _position.y) {
-                _position.x = -_position.x;
-                canMoveX = true;
-            }
-            else {
-                _position.y = -_position.y;
-                canMoveY = true;
-            }
-        }
-
-        if (canMoveX) {
-            sf::Vector2f currentPos = GetPosition();
-            position = sf::Vector2f(currentPos.x + _position.x, currentPos.y);
-        }        
-        if (canMoveY) {
-            sf::Vector2f currentPos = GetPosition();
-            position = sf::Vector2f(currentPos.x, currentPos.y - _position.y);
+        else if (physics->shape == PhysicsBehaviour::Shape::Circle) {
+            std::cout << "CREATED CIRCLE" << std::endl;
+            b2Circle circleData = { b2Vec2{0,0}, GetSizeInM().x / 2 }; 
+            b2CreateCircleShape(bodyId, &shapeDef, &circleData); 
         }
 
     }
     else {
-        sf::Vector2f currentPos = GetPosition();
-        position = sf::Vector2f(currentPos.x + _position.x, currentPos.y - _position.y);
+        std::cout << "CREATED default" << std::endl;
+
+        body.type = b2_staticBody;
+
+        bodyId = b2CreateBody(*worldId, &body);
+
+        shapeDef.density = 1.0f;
+        std::cout << size.x << ":" << size.y << std::endl;
+        b2Polygon polygon = b2MakeBox(size.x / 2, size.y / 2);
+        b2CreatePolygonShape(bodyId, &shapeDef, &polygon);
     }
 }
-void GameObject::MovePosition(float posX, float posY) {
-    MovePosition(sf::Vector2f(posX, posY));
-}
-void GameObject::Rotate(float _rotation) {
-    float currentRotation = GetRotation();
-    rotation = currentRotation + _rotation;
-}
-void GameObject::ChangeScale(float scale) {
-    ChangeScale(sf::Vector2f(scale, scale));
-}
-void GameObject::ChangeScale(float scaleX, float scaleY) {
-    ChangeScale(sf::Vector2f(scaleX, scaleY));
-}
-void GameObject::ChangeScale(sf::Vector2f _scale) {
-    sf::Vector2f currentScale = GetScale();
-    scale = currentScale + _scale;
+
+void GameObject::SetPosInM(b2Vec2 _pos) {
+    if (centerPos) {
+        position = sf::Vector2(_pos.x * worldScale - scale.x / 2, _pos.y * worldScale - scale.y / 2);
+    }
+    else {
+        position = sf::Vector2(_pos.x * worldScale, _pos.y * worldScale);
+    }
 }
 
-// Getters
-sf::Vector2f GameObject::GetPosition() const {
-    return position;
+b2Vec2 GameObject::GetPosInM() {
+    return { position.x / worldScale, position.y / worldScale };
 }
+
+b2Vec2 GameObject::GetSizeInM() {
+    std::cout << scale.x << ":" << scale.y << std::endl;
+
+    return { scale.x / worldScale, scale.y / worldScale };
+}
+
 sf::Vector2f GameObject::GetCenter() const {
-    
-    return sf::Vector2f(position.x + sprite.getGlobalBounds().width / 2, 
-                        position.y + sprite.getGlobalBounds().height / 2);
-}
-
-float GameObject::GetRotation() const {
-    return rotation;
-}
-
-sf::Vector2f GameObject::GetScale() const {
-    return scale;
+    return sf::Vector2f(position.x + scale.x / 2,
+        position.y + scale.y / 2);
 }
 
 const sf::Sprite& GameObject::GetSprite() const {
     return sprite;
-}
-
-void GameObject::SetScale(float scale) {
-    ChangeScale(sf::Vector2f(scale, scale));
-}
-void GameObject::SetScale(float scaleX, float scaleY) {
-    ChangeScale(sf::Vector2f(scaleX, scaleY));
-}
-void GameObject::SetScale(sf::Vector2f _scale) {
-    scale = _scale;
-}
-
-
-
-void GameObject::CheckGround(bool speedup) {
-
-    float delayBetween = 1 / groundChecksPerSecond;
-
-    if (speedup) {
-        groundCheckTimer += deltaTime * 6;
-    }
-    else {
-        groundCheckTimer += deltaTime;
-    }
-
-
-    if (groundCheckTimer > delayBetween) {
-        groundCheckTimer = 0;
-        
-        //perform ground check
-
-        sf::FloatRect spriteBounds = sprite.getGlobalBounds();
-        sf::RectangleShape groundCheckShape;
-        groundCheckShape.setSize(sf::Vector2f(spriteBounds.width, spriteBounds.height));
-        groundCheckShape.setPosition(spriteBounds.left, spriteBounds.top + groundCheckDistance);
-
-        bool isOnGround = false;
-
-        for (auto& obj : *engineGameObjects) {
-            if (obj.hasCollision && &obj != this) {
-                if (obj.tag == groundTag) {
-                    if (groundCheckShape.getGlobalBounds().intersects(obj.sprite.getGlobalBounds())) {
-                        isOnGround = true;
-                        break;
-                    }
-                }
-            }
-        }
-
-        IsGrounded = isOnGround;
-    }
-}
-
-void GameObject::CheckWall(bool speedup) {
-
-    float delayBetween = 1 / wallChecksPerSecond;
-
-    if (speedup) {
-        wallCheckTimer += deltaTime * 6;
-    }
-    else {
-        wallCheckTimer += deltaTime;
-    }
-
-
-    if (wallCheckTimer > delayBetween) {
-        wallCheckTimer = 0;
-
-        //perform wall check
-
-        sf::FloatRect spriteBounds = sprite.getGlobalBounds();
-
-        sf::RectangleShape wallCheckShapeLeft;
-        wallCheckShapeLeft.setSize(sf::Vector2f(spriteBounds.width, spriteBounds.height));
-        wallCheckShapeLeft.setPosition(spriteBounds.left - wallCheckDistance, spriteBounds.top);
-
-        sf::RectangleShape wallCheckShapeRight;
-        wallCheckShapeRight.setSize(sf::Vector2f(spriteBounds.width, spriteBounds.height));
-        wallCheckShapeRight.setPosition(spriteBounds.left + wallCheckDistance, spriteBounds.top);
-
-        Walls isOnWall = None;
-
-        for (auto& obj : *engineGameObjects) {
-            if (obj.hasCollision && &obj != this) {
-                if (obj.tag == wallTag) {
-                    if (wallCheckShapeLeft.getGlobalBounds().intersects(obj.sprite.getGlobalBounds())) {
-                        isOnWall = Left;
-                        break;
-                    }
-                    if (wallCheckShapeRight.getGlobalBounds().intersects(obj.sprite.getGlobalBounds())) {
-                        isOnWall = Right;
-                        break;
-                    }
-                }
-            }
-        }
-
-        wallCheck = isOnWall;
-    }
 }
 
 
@@ -277,6 +104,7 @@ void GameObject::Start(sf::RenderWindow* _window, std::vector<GameObject>* _engi
     engineGameObjects = _engineGameObjects;
     window = _window;
     engine = _engine;
+    centerPos = _engine->centerPositions;
     for (auto& obj : behaviours) {
         obj->SetGameObject(this);
         obj->Start();
@@ -285,21 +113,18 @@ void GameObject::Start(sf::RenderWindow* _window, std::vector<GameObject>* _engi
 
 void GameObject::Update(float _deltaTime) {
     deltaTime = _deltaTime;
-    std::cout << "Position: " << b2Body_GetPosition(myBodyId).x << " : " << b2Body_GetPosition(myBodyId).y << std::endl;
+
     for (auto& obj : behaviours) {
         if (obj->enabled) {
             obj->Update();
             obj->deltaTime = _deltaTime;
         }
     }
-    if (hasCollision) {
-        CheckGround();
-    }
-    if (checkWalls) {
-        CheckWall();
-    }
-}
 
+    b2Vec2 currentPos = b2Body_GetPosition(bodyId);
+    SetPosInM(currentPos);
+    std::cout << position.y << std::endl;
+}
 
 
 // Render the sprite
@@ -310,9 +135,8 @@ void GameObject::Render() {
 }
 
 void GameObject::UpdateSprite() {
-    sprite.setPosition(this->position);
+    sprite.setPosition(position);
     sprite.setRotation(this->rotation);
-    sprite.setScale(scale);
     sprite.setTexture(texture);
 }
 
@@ -320,5 +144,9 @@ void GameObject::addBehaviour(GameBehaviour* behaviour) {
     // Set the GameObject reference for each behaviour
     behaviour->SetGameObject(this);
     behaviours.push_back(behaviour);
+
+    if (dynamic_cast<PhysicsBehaviour*>(behaviour)) {
+        std::cout << "added the bahaviour" << std::endl;
+    }
 }
 

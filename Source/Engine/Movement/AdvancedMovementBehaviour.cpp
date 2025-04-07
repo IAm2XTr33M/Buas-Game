@@ -106,6 +106,6 @@ void AdvancedMovementBehaviour::Update() {
 
 
 	if (finalXMove != 0 || finalYMove != 0) {
-		gameObject->MovePosition(finalXMove * deltaTime, finalYMove * deltaTime);
+		//gameObject->MovePosition(finalXMove * deltaTime, finalYMove * deltaTime);
 	}
 }

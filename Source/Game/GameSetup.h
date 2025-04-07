@@ -4,6 +4,7 @@
 #include <GameObjects/DebugBehaviour.h>
 #include <Physics/GravityBehaviour.h>
 #include <Physics/ColliderBehaviour.h>
+#include <Physics/PhysicsBehaviour.h>
 #include <Movement/MovementBehaviour.h>
 #include <Movement/AdvancedMovementBehaviour.h>
 #include <Movement/JumpBehaviour.h>
